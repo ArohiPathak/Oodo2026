@@ -6,7 +6,7 @@ export interface Employee {
   email: string;
   phone: string;
   joiningDate: string;
-  status: 'present' | 'absent' | 'leave';
+  status: 'present' | 'absent' | 'leave' | 'half-day';
   company?: string;
   manager?: string;
   location?: string;
@@ -17,6 +17,11 @@ export interface Employee {
   gender?: string;
   maritalStatus?: string;
   avatarUrl?: string;
+  about?: string;
+  whatILove?: string;
+  interests?: string;
+  skills?: string[];
+  certifications?: string[];
 }
 
 export const initialEmployees: Employee[] = [
@@ -37,7 +42,12 @@ export const initialEmployees: Employee[] = [
     nationality: "Indian",
     personalEmail: "aarav.sharma.personal@gmail.com",
     gender: "Male",
-    maritalStatus: "Single"
+    maritalStatus: "Single",
+    about: "Software Engineer focused on frontend and backend web development. Loves building products that solve real-world problems and writing clean, scalable code.",
+    whatILove: "Solving complex engineering challenges and collaborating with cross-functional teams to build beautiful user interfaces.",
+    interests: "Open-source development, hiking, playing guitar, and photography.",
+    skills: ["React", "Next.js", "TypeScript", "Node.js", "SQL"],
+    certifications: ["AWS Certified Developer - Associate", "Certified ScrumMaster (CSM)"]
   },
   {
     id: "EMP002",
@@ -67,7 +77,12 @@ export const initialEmployees: Employee[] = [
     email: "ananya.rao@dayflow.com",
     phone: "+91 98765 43213",
     joiningDate: "2023-08-20",
-    status: "present"
+    status: "present",
+    about: "HR Specialist passionate about building high-performing teams, fostering a positive workplace culture, and matching exceptional talent with growth opportunities.",
+    whatILove: "Fostering collaboration across teams and witnessing employee growth from onboarding to leadership milestones.",
+    interests: "Blogging on organization culture, traveling, cooking, and reading personal growth books.",
+    skills: ["Talent Acquisition", "Conflict Resolution", "Performance Management", "Workplace Compliance"],
+    certifications: ["SHRM Certified Professional (SHRM-CP)", "Professional in Human Resources (PHR)"]
   },
   {
     id: "EMP005",
@@ -117,6 +132,6 @@ export const initialEmployees: Employee[] = [
     email: "meera.joshi@dayflow.com",
     phone: "+91 98765 43218",
     joiningDate: "2023-12-05",
-    status: "present"
+    status: "half-day"
   }
 ];

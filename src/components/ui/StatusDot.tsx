@@ -28,16 +28,16 @@ export const StatusDot: React.FC<StatusDotProps> = ({
       label: 'On Leave',
     },
     absent: {
-      dotClass: 'bg-[#F59E0B]', // Yellow
+      dotClass: 'bg-[#F59E0B]',
       textClass: 'text-amber-600',
       bgClass: 'bg-[#FEF3C7]',
       label: 'Absent',
     },
     half_day: {
-      dotClass: 'bg-[#8B5CF6]', // Purple
+      dotClass: 'bg-[#8B5CF6]',
       textClass: 'text-purple-600',
       bgClass: 'bg-[#F5F3FF]',
-      label: 'Half Day',
+      label: 'Half-day',
     },
   };
 
@@ -51,7 +51,9 @@ export const StatusDot: React.FC<StatusDotProps> = ({
         {status === 'leave' ? (
           <Plane size={12} className={config.textClass} />
         ) : (
-          <span className={`w-1.5 h-1.5 rounded-full ${config.dotClass}`} />
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${config.dotClass}`}
+          />
         )}
         {config.label}
       </span>
@@ -73,7 +75,7 @@ export const StatusDot: React.FC<StatusDotProps> = ({
           aria-label={`Status: ${config.label}`}
         />
       )}
-      {/* Tooltip */}
+
       <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-10 bg-gray-900 text-white text-[10px] px-2 py-0.5 rounded shadow whitespace-nowrap font-medium pointer-events-none">
         {config.label}
       </span>

@@ -44,11 +44,16 @@ export const Navbar: React.FC<NavbarProps> = ({ currentUser, onLogout }) => {
         <div className="flex justify-between h-16">
           {/* Left Side: Logo & Desktop Links */}
           <div className="flex items-center gap-8">
-            <Link href="/employees" className="flex items-center gap-2 select-none">
+            <Link
+              href="/"
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl select-none transition-all duration-200 ${
+                pathname === '/' ? 'bg-primary/15 text-primary' : 'hover:bg-white/50'
+              }`}
+            >
               <span className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-white font-bold text-lg shadow-sm">
                 D
               </span>
-              <span className="text-xl font-bold tracking-tight text-gray-900">
+              <span className="text-xl font-bold tracking-tight text-gray-900 font-sans">
                 Dayflow<span className="text-primary font-black">.</span>
               </span>
             </Link>

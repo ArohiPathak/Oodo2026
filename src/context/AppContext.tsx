@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Employee, initialEmployees } from '../data/mockEmployees';
+import { LeaveRequest } from '@/types/leave';
+import { initialLeaveRequests } from '../data/mockRequests';
 
 interface AppContextType {
   employees: Employee[];
@@ -13,27 +15,80 @@ interface AppContextType {
   handleCheckIn: () => void;
   handleCheckOut: () => void;
   currentUser: Employee;
+  leaveRequests: LeaveRequest[];
+  approveLeaveRequest: (id: string) => void;
+  rejectLeaveRequest: (id: string) => void;
   logout: () => void;
+  updateEmployeeProfile: (id: string, updates: Partial<Employee>) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [checkInTime, setCheckInTime] = useState('09:00 AM');
   const router = useRouter();
   const supabase = createClient();
 
-  // Find current user (Aarav Sharma)
-  const currentUser = employees.find((emp) => emp.id === 'EMP001') || employees[0];
+  // Find current user state dynamically linked to Supabase session (defaults to Aarav Sharma)
+  const [currentUser, setCurrentUser] = useState<Employee>(() => {
+    return initialEmployees.find((emp) => emp.id === 'EMP001') || initialEmployees[0];
+  });
 
-  // Sync current user's initial state if they are present/absent
+  // Sync current user's initial check-in state
   useEffect(() => {
     if (currentUser) {
       setIsCheckedIn(currentUser.status === 'present');
     }
-  }, []);
+  }, [currentUser]);
+
+  // Synchronize currentUser state with Supabase authenticated user role
+  useEffect(() => {
+    const syncUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .maybeSingle();
+        
+        if (profile) {
+          const targetId = profile.role === 'admin' ? 'EMP004' : 'EMP001';
+          const matchedUser = employees.find((emp) => emp.id === targetId);
+          if (matchedUser) {
+            setCurrentUser(matchedUser);
+          }
+        }
+      }
+    };
+
+    syncUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .maybeSingle();
+        
+        if (profile) {
+          const targetId = profile.role === 'admin' ? 'EMP004' : 'EMP001';
+          const matchedUser = employees.find((emp) => emp.id === targetId);
+          if (matchedUser) {
+            setCurrentUser(matchedUser);
+          }
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [employees]);
 
   const addEmployee = (newEmp: Omit<Employee, 'status' | 'joiningDate'>) => {
     const fullEmp: Employee = {
@@ -67,6 +122,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const approveLeaveRequest = (id: string) => {
+    setLeaveRequests((prev) =>
+      prev.map((req) => (req.id === id ? { ...req, status: 'approved' } : req))
+    );
+  };
+
+  const rejectLeaveRequest = (id: string) => {
+    setLeaveRequests((prev) =>
+      prev.map((req) => (req.id === id ? { ...req, status: 'rejected' } : req))
+    );
+  };
+
   const logout = async () => {
     const { error } = await supabase.auth.signOut();
 
@@ -78,6 +145,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     router.push('/login');
     router.refresh();
   };
+
+  const updateEmployeeProfile = (id: string, updates: Partial<Employee>) => {
+    setEmployees((prev) =>
+      prev.map((emp) => (emp.id === id ? { ...emp, ...updates } : emp))
+    );
+    if (currentUser && currentUser.id === id) {
+      setCurrentUser((prev) => ({ ...prev, ...updates }));
+    }
+  };
   return (
     <AppContext.Provider
       value={{
@@ -88,7 +164,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleCheckIn,
         handleCheckOut,
         currentUser,
+        leaveRequests,
+        approveLeaveRequest,
+        rejectLeaveRequest,
         logout,
+        updateEmployeeProfile,
       }}
     >
       {children}
