@@ -35,7 +35,12 @@ export const EmployeeProfileHeader: React.FC<EmployeeProfileHeaderProps> = ({ em
         {/* Name and Designation Row */}
         <div className="pt-16 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black text-gray-900 tracking-tight">{employee.name}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-black text-gray-900 tracking-tight">{employee.name}</h1>
+              <span className="px-2.5 py-0.5 bg-primary/10 text-primary rounded-lg text-xs font-bold font-mono">
+                {employee.id}
+              </span>
+            </div>
             <p className="text-sm font-semibold text-gray-500 mt-0.5">{employee.designation}</p>
           </div>
         </div>
