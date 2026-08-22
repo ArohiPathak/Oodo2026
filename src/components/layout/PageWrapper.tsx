@@ -10,7 +10,7 @@ interface PageWrapperProps {
 }
 
 export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
-  const { currentUser, logout } = useApp();
+  const { currentUser, logout, isLoadingAuth } = useApp();
   const pathname = usePathname();
 
   const isAuthPage =
@@ -21,6 +21,15 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
     return (
       <div className="min-h-screen bg-lavender flex flex-col items-center justify-center p-4">
         {children}
+      </div>
+    );
+  }
+
+  if (isLoadingAuth || !currentUser) {
+    return (
+      <div className="min-h-screen bg-lavender flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+        <p className="text-sm font-semibold text-gray-500 mt-4">Loading your workspace...</p>
       </div>
     );
   }

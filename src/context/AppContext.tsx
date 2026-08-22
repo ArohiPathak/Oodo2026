@@ -3,18 +3,18 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Employee, initialEmployees } from '../data/mockEmployees';
+import { Employee } from '../data/mockEmployees';
 import { LeaveRequest } from '@/types/leave';
 import { initialLeaveRequests } from '../data/mockRequests';
 
 interface AppContextType {
-  employees: Employee[];
-  addEmployee: (emp: Omit<Employee, 'status' | 'joiningDate'>) => void;
   isCheckedIn: boolean;
   checkInTime: string;
   handleCheckIn: () => void;
   handleCheckOut: () => void;
-  currentUser: Employee;
+  currentUser: (Employee & { role?: string }) | null;
+  role: 'admin' | 'employee' | null;
+  isLoadingAuth: boolean;
   leaveRequests: LeaveRequest[];
   approveLeaveRequest: (id: string) => void;
   rejectLeaveRequest: (id: string) => void;
@@ -25,17 +25,15 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [checkInTime, setCheckInTime] = useState('09:00 AM');
   const router = useRouter();
   const supabase = createClient();
 
-  // Find current user state dynamically linked to Supabase session (defaults to Aarav Sharma)
-  const [currentUser, setCurrentUser] = useState<Employee>(() => {
-    return initialEmployees.find((emp) => emp.id === 'EMP001') || initialEmployees[0];
-  });
+  const [currentUser, setCurrentUser] = useState<(Employee & { role?: string }) | null>(null);
+  const [role, setRole] = useState<'admin' | 'employee' | null>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
   // Sync current user's initial check-in state
   useEffect(() => {
@@ -46,21 +44,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Synchronize currentUser state with Supabase authenticated user role
   useEffect(() => {
+    let isMounted = true;
+
     const syncUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .maybeSingle();
-        
-        if (profile) {
-          const targetId = profile.role === 'admin' ? 'EMP004' : 'EMP001';
-          const matchedUser = employees.find((emp) => emp.id === targetId);
-          if (matchedUser) {
-            setCurrentUser(matchedUser);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select(`
+              *,
+              department:departments(name),
+              company:companies(name),
+              manager:profiles!manager_id(full_name)
+            `)
+            .eq('id', session.user.id)
+            .maybeSingle();
+          
+          if (profile && isMounted) {
+            const mappedUser: Employee & { role?: string } = {
+              id: profile.employee_id || `EMP-${profile.id.substring(0, 8).toUpperCase()}`,
+              name: profile.full_name || 'New Employee',
+              designation: profile.designation || 'Software Engineer',
+              department: profile.department?.name || 'Engineering',
+              email: profile.email || '',
+              phone: profile.phone || '+91 98765 00000',
+              joiningDate: profile.joining_date || new Date().toISOString().split('T')[0],
+              status: 'present',
+              company: profile.company?.name || 'Dayflow Technologies',
+              manager: profile.manager?.full_name || 'Ananya Rao',
+              location: profile.location || 'Mumbai, India',
+              dob: profile.dob || '',
+              address: profile.address || '',
+              nationality: profile.nationality || '',
+              personalEmail: profile.personal_email || '',
+              gender: profile.gender || '',
+              maritalStatus: profile.marital_status || '',
+              avatarUrl: profile.profile_picture || '',
+              about: profile.about || '',
+              role: profile.role,
+            };
+            setCurrentUser(mappedUser);
+            setRole(profile.role as 'admin' | 'employee');
           }
+        } else {
+          if (isMounted) {
+            setCurrentUser(null);
+            setRole(null);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to sync auth session:', err);
+      } finally {
+        if (isMounted) {
+          setIsLoadingAuth(false);
         }
       }
     };
@@ -68,36 +105,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     syncUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .maybeSingle();
-        
-        if (profile) {
-          const targetId = profile.role === 'admin' ? 'EMP004' : 'EMP001';
-          const matchedUser = employees.find((emp) => emp.id === targetId);
-          if (matchedUser) {
-            setCurrentUser(matchedUser);
-          }
+      if (event === 'SIGNED_OUT') {
+        if (isMounted) {
+          setCurrentUser(null);
+          setRole(null);
+          setIsLoadingAuth(false);
         }
+      } else if (session) {
+        syncUser();
       }
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
-  }, [employees]);
-
-  const addEmployee = (newEmp: Omit<Employee, 'status' | 'joiningDate'>) => {
-    const fullEmp: Employee = {
-      ...newEmp,
-      status: 'present', // Defaults to present when added
-      joiningDate: new Date().toISOString().split('T')[0],
-    };
-    setEmployees((prev) => [...prev, fullEmp]);
-  };
+  }, []);
 
   const handleCheckIn = () => {
     setIsCheckedIn(true);
@@ -106,20 +129,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       minute: '2-digit',
       hour12: true,
     }));
-
-    // Update logged-in employee status to 'present'
-    setEmployees((prev) =>
-      prev.map((emp) => (emp.id === currentUser.id ? { ...emp, status: 'present' } : emp))
-    );
+    if (currentUser) {
+      setCurrentUser((prev) => prev ? { ...prev, status: 'present' } : null);
+    }
   };
 
   const handleCheckOut = () => {
     setIsCheckedIn(false);
-
-    // Update logged-in employee status to 'absent'
-    setEmployees((prev) =>
-      prev.map((emp) => (emp.id === currentUser.id ? { ...emp, status: 'absent' } : emp))
-    );
+    if (currentUser) {
+      setCurrentUser((prev) => prev ? { ...prev, status: 'absent' } : null);
+    }
   };
 
   const approveLeaveRequest = (id: string) => {
@@ -147,23 +166,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateEmployeeProfile = (id: string, updates: Partial<Employee>) => {
-    setEmployees((prev) =>
-      prev.map((emp) => (emp.id === id ? { ...emp, ...updates } : emp))
-    );
     if (currentUser && currentUser.id === id) {
-      setCurrentUser((prev) => ({ ...prev, ...updates }));
+      setCurrentUser((prev) => prev ? { ...prev, ...updates } : null);
     }
   };
+
   return (
     <AppContext.Provider
       value={{
-        employees,
-        addEmployee,
         isCheckedIn,
         checkInTime,
         handleCheckIn,
         handleCheckOut,
         currentUser,
+        role,
+        isLoadingAuth,
         leaveRequests,
         approveLeaveRequest,
         rejectLeaveRequest,
@@ -183,3 +200,4 @@ export const useApp = () => {
   }
   return context;
 };
+

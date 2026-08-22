@@ -1,24 +1,63 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/Button';
 import { EmployeeSearch } from '@/components/employees/EmployeeSearch';
 import { EmployeeGrid } from '@/components/employees/EmployeeGrid';
 import { AddEmployeeModal } from '@/components/employees/AddEmployeeModal';
+import { employeeService } from '@/services/employeeService';
+import { Employee } from '@/data/mockEmployees';
 
 export default function EmployeesPage() {
+  const router = useRouter();
   const {
-    employees,
-    addEmployee,
     isCheckedIn,
     checkInTime,
     currentUser,
+    role
   } = useApp();
 
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  // Server/RLS-backed checks & redirects as UX
+  useEffect(() => {
+    if (role && role !== 'admin') {
+      router.push('/employee/dashboard');
+    }
+  }, [role, router]);
+
+  const loadEmployees = async () => {
+    setLoading(true);
+    try {
+      const data = await employeeService.fetchEmployees();
+      setEmployees(data);
+    } catch (err) {
+      console.error('Failed to load employees:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (role === 'admin') {
+      loadEmployees();
+    }
+  }, [role]);
+
+  const handleAddEmployee = async (newEmp: Omit<Employee, 'status' | 'joiningDate'>) => {
+    try {
+      await employeeService.createEmployee(newEmp);
+      await loadEmployees();
+    } catch (err: any) {
+      alert(`Failed to add employee: ${err.message}`);
+    }
+  };
 
   // Dynamic next employee ID computation
   const numericIds = employees
@@ -38,6 +77,10 @@ export default function EmployeesPage() {
       emp.department.toLowerCase().includes(query)
     );
   });
+
+  if (role && role !== 'admin') {
+    return null; // Let the redirect happen
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -66,7 +109,7 @@ export default function EmployeesPage() {
           </div>
           <div>
             <h2 className="text-xl font-black text-gray-900 tracking-tight">
-              HI, {currentUser?.name || 'Aarav Sharma'}!
+              HI, {currentUser?.name || 'Admin'}!
             </h2>
             <p className="text-sm font-semibold text-[#B26B50] mt-0.5">
               Ready to start your day?
@@ -103,13 +146,19 @@ export default function EmployeesPage() {
       </div>
 
       {/* Responsive Cards Grid */}
-      <EmployeeGrid employees={filteredEmployees} />
+      {loading ? (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <EmployeeGrid employees={filteredEmployees} />
+      )}
 
       {/* Reusable Form Dialog Modal */}
       <AddEmployeeModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onAddEmployee={addEmployee}
+        onAddEmployee={handleAddEmployee}
         nextIdSuggestion={nextIdSuggestion}
       />
     </div>

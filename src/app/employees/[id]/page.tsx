@@ -1,8 +1,11 @@
 'use client';
 
-import React, { use } from 'react';
+import React, { use, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { EmployeeDetails } from '@/components/employees/EmployeeDetails';
+import { employeeService } from '@/services/employeeService';
+import { Employee } from '@/data/mockEmployees';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
@@ -11,11 +14,49 @@ interface PageProps {
 }
 
 export default function EmployeeDetailsPage({ params }: PageProps) {
-  // Resolve params asynchronously in line with Next.js App Router rules
+  const router = useRouter();
   const { id } = use(params);
-  const { employees } = useApp();
+  const { role } = useApp();
+  
+  const [employee, setEmployee] = useState<Employee | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const employee = employees.find((emp) => emp.id === id);
+  // Admin access redirect check
+  useEffect(() => {
+    if (role && role !== 'admin') {
+      router.push('/employee/dashboard');
+    }
+  }, [role, router]);
+
+  useEffect(() => {
+    const loadDetails = async () => {
+      setLoading(true);
+      try {
+        const emp = await employeeService.fetchEmployeeById(id);
+        setEmployee(emp);
+      } catch (err) {
+        console.error('Failed to load employee details:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (role === 'admin') {
+      loadDetails();
+    }
+  }, [id, role]);
+
+  if (role && role !== 'admin') {
+    return null;
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (!employee) {
     return (

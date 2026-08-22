@@ -14,6 +14,7 @@ interface NavbarProps {
     name: string;
     email: string;
     avatarUrl?: string;
+    role?: string;
   };
   onLogout: () => void;
 }
@@ -25,7 +26,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentUser, onLogout }) => {
 
   const { isCheckedIn, checkInTime, handleCheckIn, handleCheckOut } = useApp();
 
-  const isAdmin = currentUser.id === 'EMP004';
+  const isAdmin = currentUser.role === 'admin';
   const navItems = [
     { name: 'Employees', href: '/employees', icon: Users },
     { name: 'Attendance', href: isAdmin ? '/attendance' : '/employee/attendance', icon: Clock },

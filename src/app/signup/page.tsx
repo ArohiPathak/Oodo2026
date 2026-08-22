@@ -2,8 +2,10 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { createClient } from '@/lib/supabase/client';
 
 export default function SignupPage() {
   const [companyName, setCompanyName] = useState('');
@@ -16,6 +18,11 @@ export default function SignupPage() {
   
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  const router = useRouter();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -24,16 +31,102 @@ export default function SignupPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
 
     if (password !== confirmPassword) {
-      alert('Passwords do not match!');
+      setErrorMsg('Passwords do not match!');
       return;
     }
 
-    // Temporary visual placeholder feedback as per specs
-    alert('Sign Up clicked! Company onboarding and registration will be connected in a future update.');
+    setIsLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    try {
+      const supabase = createClient();
+
+      // 1. Call Supabase Auth signUp
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            full_name: name,
+            phone: phone,
+            role: 'admin',
+          }
+        }
+      });
+
+      if (error) {
+        console.error('Supabase Auth error during signup:', error);
+        setErrorMsg(error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!data.user) {
+        setErrorMsg('Unable to complete signup. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Create Company
+      const { data: company, error: companyErr } = await supabase
+        .from('companies')
+        .insert({
+          name: companyName,
+          email: email,
+          phone: phone,
+        })
+        .select()
+        .single();
+
+      if (companyErr) {
+        console.error('Supabase DB error creating company:', companyErr);
+        setErrorMsg(companyErr.message);
+        setIsLoading(false);
+        return;
+      }
+
+      // 3. Create Admin Profile
+      const { error: profileErr } = await supabase
+        .from('profiles')
+        .insert({
+          id: data.user.id,
+          employee_id: `EMP-${data.user.id.substring(0, 8).toUpperCase()}`,
+          full_name: name,
+          email: email,
+          phone: phone,
+          role: 'admin',
+          company_id: company?.id || null,
+          joining_date: new Date().toISOString().split('T')[0],
+        });
+
+      if (profileErr) {
+        console.error('Supabase DB error creating profile:', profileErr);
+        setErrorMsg(profileErr.message);
+        setIsLoading(false);
+        return;
+      }
+
+      // 4. Success handling
+      if (data.session) {
+        // Redirect to admin area directly if session exists (email confirmation disabled)
+        router.push('/employees');
+      } else {
+        // Session is null -> Email confirmation enabled
+        setSuccessMsg('Account created. Please check your email to verify your account.');
+      }
+    } catch (err: any) {
+      console.error('Unexpected signup error:', err);
+      setErrorMsg(err.message || 'An unexpected error occurred.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -61,10 +154,11 @@ export default function SignupPage() {
             id="companyName"
             type="text"
             required
+            disabled={isLoading}
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
             placeholder="Enter company name"
-            className="w-full px-4 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
+            className="w-full px-4 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all disabled:opacity-60"
           />
           
           {/* Logo upload trigger */}
@@ -72,6 +166,7 @@ export default function SignupPage() {
             <input
               type="file"
               accept="image/*"
+              disabled={isLoading}
               onChange={handleFileChange}
               className="hidden"
               id="logo-upload"
@@ -95,10 +190,11 @@ export default function SignupPage() {
             id="fullName"
             type="text"
             required
+            disabled={isLoading}
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Enter your full name"
-            className="w-full px-4 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
+            className="w-full px-4 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all disabled:opacity-60"
           />
         </div>
 
@@ -111,10 +207,11 @@ export default function SignupPage() {
             id="email"
             type="email"
             required
+            disabled={isLoading}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email"
-            className="w-full px-4 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
+            className="w-full px-4 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all disabled:opacity-60"
           />
         </div>
 
@@ -127,10 +224,11 @@ export default function SignupPage() {
             id="phone"
             type="tel"
             required
+            disabled={isLoading}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="Enter your phone number"
-            className="w-full px-4 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
+            className="w-full px-4 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all disabled:opacity-60"
           />
         </div>
 
@@ -144,10 +242,11 @@ export default function SignupPage() {
               id="password"
               type={showPassword ? 'text' : 'password'}
               required
+              disabled={isLoading}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Create a password"
-              className="w-full pl-4 pr-10 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
+              className="w-full pl-4 pr-10 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all disabled:opacity-60"
             />
             <button
               type="button"
@@ -169,10 +268,11 @@ export default function SignupPage() {
               id="confirmPassword"
               type={showConfirmPassword ? 'text' : 'password'}
               required
+              disabled={isLoading}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm your password"
-              className="w-full pl-4 pr-10 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
+              className="w-full pl-4 pr-10 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all disabled:opacity-60"
             />
             <button
               type="button"
@@ -184,13 +284,28 @@ export default function SignupPage() {
           </div>
         </div>
 
+        {/* Error Alert Display */}
+        {errorMsg && (
+          <div className="bg-red-50 border border-red-100 text-red-600 rounded-xl p-3 text-xs font-semibold animate-in fade-in slide-in-from-top-1 duration-200">
+            {errorMsg}
+          </div>
+        )}
+
+        {/* Success Alert Display */}
+        {successMsg && (
+          <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl p-3.5 text-xs font-semibold animate-in fade-in slide-in-from-top-1 duration-200">
+            {successMsg}
+          </div>
+        )}
+
         {/* Submit Button */}
         <Button
           type="submit"
           variant="primary"
-          className="w-full py-2.5 shadow-soft hover:shadow-soft-lg mt-4 text-sm font-semibold tracking-wider"
+          disabled={isLoading}
+          className="w-full py-2.5 shadow-soft hover:shadow-soft-lg mt-4 text-sm font-semibold tracking-wider disabled:opacity-50"
         >
-          SIGN UP
+          {isLoading ? 'SIGNING UP...' : 'SIGN UP'}
         </Button>
       </form>
 

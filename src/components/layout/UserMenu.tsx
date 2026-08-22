@@ -11,6 +11,7 @@ interface UserMenuProps {
     name: string;
     email: string;
     avatarUrl?: string;
+    role?: string;
   };
   onLogout: () => void;
 }
@@ -42,7 +43,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
         {/* Dropdown Items */}
         <div className="p-1">
           <Link
-            href="/profile"
+            href={user.role === 'admin' ? '/profile' : '/employee/profile'}
             onClick={onClose}
             className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-700 hover:text-primary hover:bg-primary-light/5 rounded-xl transition-all duration-200"
           >

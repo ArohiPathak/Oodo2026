@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { EmployeeProfileHeader } from '@/components/employee/EmployeeProfileHeader';
 import { Pencil, Plus, X, Award, Briefcase, Heart, Smile } from 'lucide-react';
@@ -9,7 +10,17 @@ import { Button } from '@/components/ui/Button';
 type TabType = 'resume' | 'private_info' | 'salary';
 
 export default function ProfilePage() {
-  const { currentUser, updateEmployeeProfile } = useApp();
+  const router = useRouter();
+  const { currentUser: rawCurrentUser, updateEmployeeProfile, role } = useApp();
+
+  useEffect(() => {
+    if (role && role !== 'admin') {
+      router.push('/employee/profile');
+    }
+  }, [role, router]);
+
+  const currentUser = rawCurrentUser!;
+
   const [activeTab, setActiveTab] = useState<TabType>('private_info');
 
   // Edit states for Left Side fields

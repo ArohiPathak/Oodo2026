@@ -80,6 +80,17 @@ export default function EmployeeTimeOffPage() {
           return;
         }
 
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (profile?.role === 'admin') {
+          router.push('/employees');
+          return;
+        }
+
         setCurrentUser(user);
         await fetchRequests(user.id);
       } catch (err) {

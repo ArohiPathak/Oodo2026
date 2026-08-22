@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { DashboardStats } from '@/components/admin/DashboardStats';
 import { AttendanceOverview } from '@/components/admin/AttendanceOverview';
@@ -8,18 +8,45 @@ import { PendingTimeOff } from '@/components/admin/PendingTimeOff';
 import { EmployeeOverview } from '@/components/admin/EmployeeOverview';
 import { QuickActions } from '@/components/admin/QuickActions';
 import { AddEmployeeModal } from '@/components/employees/AddEmployeeModal';
+import { employeeService } from '@/services/employeeService';
+import { Employee } from '@/data/mockEmployees';
 
 export default function AdminDashboard() {
   const {
-    employees,
-    addEmployee,
     leaveRequests,
     approveLeaveRequest,
     rejectLeaveRequest,
     currentUser,
   } = useApp();
 
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const loadEmployees = async () => {
+    setLoading(true);
+    try {
+      const data = await employeeService.fetchEmployees();
+      setEmployees(data);
+    } catch (err) {
+      console.error('Failed to load employees:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadEmployees();
+  }, []);
+
+  const handleAddEmployee = async (newEmp: Omit<Employee, 'status' | 'joiningDate'>) => {
+    try {
+      await employeeService.createEmployee(newEmp);
+      await loadEmployees();
+    } catch (err: any) {
+      alert(`Failed to add employee: ${err.message}`);
+    }
+  };
 
   // Stats derivation
   const totalEmployees = employees.length;
@@ -55,46 +82,54 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <DashboardStats
-        totalEmployees={totalEmployees}
-        presentCount={presentEmployees}
-        presentPercentage={presentPercentage}
-        onLeaveCount={leaveEmployees}
-        pendingTimeOffCount={pendingRequestsCount}
-      />
-
-      {/* Grid: Attendance & Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <AttendanceOverview
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <>
+          {/* Summary Cards */}
+          <DashboardStats
+            totalEmployees={totalEmployees}
             presentCount={presentEmployees}
-            absentCount={absentEmployees}
-            halfDayCount={halfDayEmployees}
-            leaveCount={leaveEmployees}
-            totalCount={totalEmployees}
+            presentPercentage={presentPercentage}
+            onLeaveCount={leaveEmployees}
+            pendingTimeOffCount={pendingRequestsCount}
           />
-        </div>
-        <div>
-          <QuickActions onNewEmployeeClick={() => setIsAddModalOpen(true)} />
-        </div>
-      </div>
 
-      {/* Pending Leave Requests */}
-      <PendingTimeOff
-        requests={leaveRequests}
-        onApprove={approveLeaveRequest}
-        onReject={rejectLeaveRequest}
-      />
+          {/* Grid: Attendance & Quick Actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <AttendanceOverview
+                presentCount={presentEmployees}
+                absentCount={absentEmployees}
+                halfDayCount={halfDayEmployees}
+                leaveCount={leaveEmployees}
+                totalCount={totalEmployees}
+              />
+            </div>
+            <div>
+              <QuickActions onNewEmployeeClick={() => setIsAddModalOpen(true)} />
+            </div>
+          </div>
 
-      {/* Employee Overview Directory */}
-      <EmployeeOverview employees={employees} />
+          {/* Pending Leave Requests */}
+          <PendingTimeOff
+            requests={leaveRequests}
+            onApprove={approveLeaveRequest}
+            onReject={rejectLeaveRequest}
+          />
+
+          {/* Employee Overview Directory */}
+          <EmployeeOverview employees={employees} />
+        </>
+      )}
 
       {/* Add Employee Modal */}
       <AddEmployeeModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onAddEmployee={addEmployee}
+        onAddEmployee={handleAddEmployee}
         nextIdSuggestion={nextIdSuggestion}
       />
     </div>

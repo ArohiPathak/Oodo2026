@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { EmployeeQuickAccess } from '@/components/employee/EmployeeQuickAccess';
 import { EmployeeAttendanceSummary } from '@/components/employee/EmployeeAttendanceSummary';
@@ -8,6 +9,7 @@ import { EmployeeLeaveSummary } from '@/components/employee/EmployeeLeaveSummary
 import { EmployeeRecentActivity, ActivityItem } from '@/components/employee/EmployeeRecentActivity';
 
 export default function EmployeeDashboardPage() {
+  const router = useRouter();
   const {
     currentUser,
     isCheckedIn,
@@ -15,7 +17,18 @@ export default function EmployeeDashboardPage() {
     handleCheckIn,
     handleCheckOut,
     logout,
+    role,
   } = useApp();
+
+  useEffect(() => {
+    if (role && role !== 'employee') {
+      router.push('/employees');
+    }
+  }, [role, router]);
+
+  if (role && role !== 'employee') {
+    return null;
+  }
 
   // Mock leave requests counters (Pending: 1, Approved: 3, Rejected: 1)
   const leaveSummary = {

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { ChevronDown, Calendar, Clock, AlertCircle, Sparkles, Award, Play, Pause } from 'lucide-react';
 
@@ -21,7 +22,18 @@ const MONTHS = [
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 
 export default function EmployeeAttendancePage() {
-  const { currentUser, leaveRequests, isCheckedIn, checkInTime } = useApp();
+  const router = useRouter();
+  const { currentUser, leaveRequests, isCheckedIn, checkInTime, role } = useApp();
+
+  useEffect(() => {
+    if (role && role !== 'employee') {
+      router.push('/employees');
+    }
+  }, [role, router]);
+
+  if (role && role !== 'employee') {
+    return null;
+  }
   
   const [viewMode, setViewMode] = useState<ViewMode>('monthly');
   const [selectedDate, setSelectedDate] = useState(() => new Date());
@@ -85,7 +97,7 @@ export default function EmployeeAttendancePage() {
     // Leave check
     const onLeave = leaveRequests.some(
       (req) =>
-        req.employeeId === currentUser.id &&
+        req.employeeId === currentUser?.id &&
         req.status === 'approved' &&
         isoDateStr >= req.startDate &&
         isoDateStr <= req.endDate

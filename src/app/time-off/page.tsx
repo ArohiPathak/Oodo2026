@@ -139,10 +139,11 @@ export default function TimeOffPage() {
         if (profile.role?.toLowerCase() === 'admin') {
           setIsAdmin(true);
           setAdminProfile(profile);
+          setAuthLoading(false);
         } else {
           setIsAdmin(false);
+          router.push('/employee/time-off');
         }
-        setAuthLoading(false);
       } catch (err) {
         console.error('Authorization routing error:', err);
         router.push('/login');
