@@ -26,8 +26,9 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
-  const [isCheckedIn, setIsCheckedIn] = useState(false);
-  const [checkInTime, setCheckInTime] = useState('09:00 AM');
+  const [checkInTimes, setCheckInTimes] = useState<Record<string, string>>({
+    'EMP001': '09:02 AM', // Aarav Sharma check-in
+  });
   const router = useRouter();
   const supabase = createClient();
 
@@ -35,12 +36,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [role, setRole] = useState<'admin' | 'employee' | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
-  // Sync current user's initial check-in state
-  useEffect(() => {
-    if (currentUser) {
-      setIsCheckedIn(currentUser.status === 'present');
-    }
-  }, [currentUser]);
+  const isCheckedIn = currentUser ? currentUser.status === 'present' : false;
+  const checkInTime = currentUser ? (checkInTimes[currentUser.id] || '09:00 AM') : '09:00 AM';
 
   // Synchronize currentUser state with Supabase authenticated user role
   useEffect(() => {
@@ -123,19 +120,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const handleCheckIn = () => {
-    setIsCheckedIn(true);
-    setCheckInTime(new Date().toLocaleTimeString('en-US', {
+    const timeStr = new Date().toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
-    }));
+    });
     if (currentUser) {
+      setCheckInTimes((prev) => ({ ...prev, [currentUser.id]: timeStr }));
       setCurrentUser((prev) => prev ? { ...prev, status: 'present' } : null);
     }
   };
 
   const handleCheckOut = () => {
-    setIsCheckedIn(false);
     if (currentUser) {
       setCurrentUser((prev) => prev ? { ...prev, status: 'absent' } : null);
     }

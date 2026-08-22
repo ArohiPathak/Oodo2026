@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { Employee } from '@/data/mockEmployees';
 import { EmployeeProfileHeader } from '@/components/employee/EmployeeProfileHeader';
 import { Pencil, Plus, X, Award, Briefcase, Heart, Smile } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -11,31 +12,53 @@ type TabType = 'resume' | 'private_info' | 'salary';
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { currentUser: rawCurrentUser, updateEmployeeProfile, role } = useApp();
+  const { currentUser, updateEmployeeProfile, role, isLoadingAuth } = useApp();
+  const [activeTab, setActiveTab] = useState<TabType>('private_info');
 
   useEffect(() => {
-    if (role && role !== 'admin') {
-      router.push('/employee/profile');
+    if (!isLoadingAuth && role && role !== 'admin') {
+      router.replace('/employee/profile');
     }
-  }, [role, router]);
-
-  const currentUser = rawCurrentUser!;
-
-  const [activeTab, setActiveTab] = useState<TabType>('private_info');
+  }, [role, isLoadingAuth, router]);
 
   // Edit states for Left Side fields
   const [isEditingAbout, setIsEditingAbout] = useState(false);
-  const [aboutText, setAboutText] = useState(currentUser.about || '');
+  const [aboutText, setAboutText] = useState(currentUser?.about || '');
 
   const [isEditingWhatILove, setIsEditingWhatILove] = useState(false);
-  const [whatILoveText, setWhatILoveText] = useState(currentUser.whatILove || '');
+  const [whatILoveText, setWhatILoveText] = useState(currentUser?.whatILove || '');
 
   const [isEditingInterests, setIsEditingInterests] = useState(false);
-  const [interestsText, setInterestsText] = useState(currentUser.interests || '');
+  const [interestsText, setInterestsText] = useState(currentUser?.interests || '');
 
   // Add states for Right Side fields
   const [newSkill, setNewSkill] = useState('');
   const [newCert, setNewCert] = useState('');
+
+  // Sync edits when currentUser shifts from Aarav to Ananya
+  useEffect(() => {
+    if (currentUser) {
+      setAboutText(currentUser.about || '');
+      setWhatILoveText(currentUser.whatILove || '');
+      setInterestsText(currentUser.interests || '');
+    }
+  }, [currentUser]);
+
+  if (isLoadingAuth) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (role && role !== 'admin') {
+    return null;
+  }
+
+  if (!currentUser) {
+    return null;
+  }
 
   // Handle Updates
   const handleSaveAbout = () => {
@@ -99,7 +122,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Header */}
-      <EmployeeProfileHeader employee={currentUser} />
+      <EmployeeProfileHeader employee={currentUser as Employee} />
 
       {/* Tabs */}
       <div className="border-b border-gray-100 mt-8 w-full">

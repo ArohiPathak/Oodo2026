@@ -40,8 +40,6 @@ export default function EmployeeTimeOffPage() {
   // Authentication states
   const [authLoading, setAuthLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
-
-  // Form states
   const [leaveType, setLeaveType] = useState('Paid');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');

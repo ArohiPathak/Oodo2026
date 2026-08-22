@@ -47,9 +47,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentUser, onLogout }) => {
           {/* Left Side: Logo & Desktop Links */}
           <div className="flex items-center gap-8">
             <Link
-              href="/"
+              href={isAdmin ? '/' : '/employee/dashboard'}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-xl select-none transition-all duration-200 ${
-                pathname === '/' ? 'bg-primary/15 text-primary' : 'hover:bg-white/50'
+                pathname === (isAdmin ? '/' : '/employee/dashboard') ? 'bg-primary/15 text-primary' : 'hover:bg-white/50'
               }`}
             >
               <span className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-white font-bold text-lg shadow-sm">
@@ -87,37 +87,39 @@ export const Navbar: React.FC<NavbarProps> = ({ currentUser, onLogout }) => {
           <div className="flex items-center gap-4">
             
             {/* Attendance Systray Toggler */}
-            <div className="bg-white/60 border border-primary/5 rounded-2xl px-3 py-1.5 min-h-[44px] flex items-center justify-center select-none">
-              {isCheckedIn ? (
-                <div className="flex flex-col items-end text-right">
-                  <div className="flex items-center gap-1.5 text-emerald-600">
-                    <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-                    <span className="text-[10px] font-extrabold tracking-tight">
-                      since {checkInTime.replace(':', '.').toLowerCase()}
-                    </span>
+            {!isAdmin && (
+              <div className="bg-white/60 border border-primary/5 rounded-2xl px-3 py-1.5 min-h-[44px] flex items-center justify-center select-none">
+                {isCheckedIn ? (
+                  <div className="flex flex-col items-end text-right">
+                    <div className="flex items-center gap-1.5 text-emerald-600">
+                      <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
+                      <span className="text-[10px] font-extrabold tracking-tight">
+                        since {checkInTime.replace(':', '.').toLowerCase()}
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleCheckOut}
+                      className="text-[9px] font-extrabold text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-0.5 rounded transition-all mt-0.5 border border-red-200/50"
+                    >
+                      Check Out
+                    </button>
                   </div>
-                  <button
-                    onClick={handleCheckOut}
-                    className="text-[9px] font-extrabold text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-0.5 rounded transition-all mt-0.5 border border-red-200/50"
-                  >
-                    Check Out
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 text-red-500">
-                    <span className="w-2 h-2 rounded-full bg-red-500" />
-                    <span className="text-[10px] font-extrabold tracking-tight hidden sm:inline">Offline</span>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 text-red-500">
+                      <span className="w-2 h-2 rounded-full bg-red-500" />
+                      <span className="text-[10px] font-extrabold tracking-tight hidden sm:inline">Offline</span>
+                    </div>
+                    <button
+                      onClick={handleCheckIn}
+                      className="text-xs bg-primary hover:bg-primary-dark text-white px-2.5 py-1 rounded-xl font-bold transition-all shadow-sm active:scale-[0.98]"
+                    >
+                      Check In
+                    </button>
                   </div>
-                  <button
-                    onClick={handleCheckIn}
-                    className="text-xs bg-primary hover:bg-primary-dark text-white px-2.5 py-1 rounded-xl font-bold transition-all shadow-sm active:scale-[0.98]"
-                  >
-                    Check In
-                  </button>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
  
             {/* Profile Avatar trigger */}
             <div className="relative">

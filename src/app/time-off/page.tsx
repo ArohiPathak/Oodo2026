@@ -295,6 +295,8 @@ export default function TimeOffPage() {
     alert('Request Time Off dialog placeholder. This functionality will be added in a future release.');
   };
 
+
+
   const balances = [
     { type: 'Paid Time Off', remaining: 12, total: 18, color: 'text-primary bg-primary/5 border-primary/10' },
     { type: 'Sick Leave', remaining: 6, total: 8, color: 'text-amber-600 bg-amber-50 border-amber-100' },

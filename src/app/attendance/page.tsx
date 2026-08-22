@@ -143,9 +143,7 @@ export default function AttendancePage() {
         }
 
         if (profile.role?.toLowerCase() !== 'admin') {
-          setAuthorized(false);
-          setAuthLoading(false);
-          router.push('/employee/attendance');
+          router.replace('/employee/attendance');
           return;
         }
 

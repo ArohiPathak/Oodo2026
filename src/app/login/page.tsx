@@ -105,7 +105,7 @@ export default function LoginPage() {
 
       // Redirect based on verified role
       if (userRole === 'admin') {
-        router.push('/employees');
+        router.push('/');
       } else {
         router.push('/employee/dashboard');
       }
@@ -146,7 +146,7 @@ export default function LoginPage() {
             onChange={(e) => setSelectedRole(e.target.value as 'employee' | 'admin')}
             className="w-full px-4 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <option value="employee">Employee</option>
+            <option value="employee">Dashboard</option>
             <option value="admin">Admin</option>
           </select>
         </div>

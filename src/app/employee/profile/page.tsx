@@ -16,9 +16,8 @@ import { EmployeeSecurity } from '@/components/employee/EmployeeSecurity';
 
 export default function EmployeeProfilePage() {
   const router = useRouter();
-  const { role } = useApp();
+  const { role, isLoadingAuth } = useApp();
   const supabase = createClient();
-
   const [activeTab, setActiveTab] = useState<EmployeeProfileTabType>('private_info');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,10 +29,10 @@ export default function EmployeeProfilePage() {
 
   // Enforce Employee-only access
   useEffect(() => {
-    if (role && role !== 'employee') {
-      router.push('/employees');
+    if (!isLoadingAuth && role && role !== 'employee') {
+      router.replace('/profile');
     }
-  }, [role, router]);
+  }, [role, isLoadingAuth, router]);
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -135,6 +134,8 @@ export default function EmployeeProfilePage() {
     location: profile.location || 'Not provided',
     avatarUrl: profile.profile_picture || '',
   };
+
+
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">

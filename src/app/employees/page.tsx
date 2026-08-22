@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { Plus } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/Button';
 import { EmployeeSearch } from '@/components/employees/EmployeeSearch';
@@ -17,7 +17,8 @@ export default function EmployeesPage() {
     isCheckedIn,
     checkInTime,
     currentUser,
-    role
+    role,
+    isLoadingAuth,
   } = useApp();
 
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -27,10 +28,10 @@ export default function EmployeesPage() {
 
   // Server/RLS-backed checks & redirects as UX
   useEffect(() => {
-    if (role && role !== 'admin') {
-      router.push('/employee/dashboard');
+    if (!isLoadingAuth && role && role !== 'admin') {
+      router.replace('/employee/dashboard');
     }
-  }, [role, router]);
+  }, [role, isLoadingAuth, router]);
 
   const loadEmployees = async () => {
     setLoading(true);
@@ -58,6 +59,18 @@ export default function EmployeesPage() {
       alert(`Failed to add employee: ${err.message}`);
     }
   };
+
+  if (isLoadingAuth) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (role && role !== 'admin') {
+    return null;
+  }
 
   // Dynamic next employee ID computation
   const numericIds = employees
