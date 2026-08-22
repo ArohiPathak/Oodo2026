@@ -6,7 +6,7 @@ export interface Employee {
   email: string;
   phone: string;
   joiningDate: string;
-  status: 'present' | 'absent' | 'leave';
+  status: 'present' | 'absent' | 'leave' | 'half-day';
 }
 
 export const initialEmployees: Employee[] = [
@@ -98,6 +98,6 @@ export const initialEmployees: Employee[] = [
     email: "meera.joshi@dayflow.com",
     phone: "+91 98765 43218",
     joiningDate: "2023-12-05",
-    status: "present"
+    status: "half-day"
   }
 ];

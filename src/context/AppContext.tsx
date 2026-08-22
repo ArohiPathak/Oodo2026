@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Employee, initialEmployees } from '../data/mockEmployees';
+import { LeaveRequest } from '@/types/leave';
+import { initialLeaveRequests } from '../data/mockRequests';
 
 interface AppContextType {
   employees: Employee[];
@@ -11,12 +13,16 @@ interface AppContextType {
   handleCheckIn: () => void;
   handleCheckOut: () => void;
   currentUser: Employee;
+  leaveRequests: LeaveRequest[];
+  approveLeaveRequest: (id: string) => void;
+  rejectLeaveRequest: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [checkInTime, setCheckInTime] = useState('09:00 AM');
 
@@ -62,6 +68,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const approveLeaveRequest = (id: string) => {
+    setLeaveRequests((prev) =>
+      prev.map((req) => (req.id === id ? { ...req, status: 'approved' } : req))
+    );
+  };
+
+  const rejectLeaveRequest = (id: string) => {
+    setLeaveRequests((prev) =>
+      prev.map((req) => (req.id === id ? { ...req, status: 'rejected' } : req))
+    );
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -72,6 +90,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleCheckIn,
         handleCheckOut,
         currentUser,
+        leaveRequests,
+        approveLeaveRequest,
+        rejectLeaveRequest,
       }}
     >
       {children}
