@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { Navbar } from './Navbar';
 
@@ -10,10 +11,20 @@ interface PageWrapperProps {
 
 export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
   const { currentUser } = useApp();
+  const pathname = usePathname();
+  const isLoginPage = pathname === '/login';
 
   const handleLogout = () => {
     alert('Log Out handler triggered. Supabase Authentication integration will be connected in a future release.');
   };
+
+  if (isLoginPage) {
+    return (
+      <div className="min-h-screen bg-lavender flex flex-col items-center justify-center p-4">
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-lavender flex flex-col">
