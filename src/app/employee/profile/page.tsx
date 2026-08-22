@@ -26,8 +26,6 @@ export default function EmployeeProfilePage() {
   // States for DB details
   const [profile, setProfile] = useState<any>(null);
   const [privateInfo, setPrivateInfo] = useState<any>(null);
-  const [payroll, setPayroll] = useState<any>(null);
-  const [salaryStructure, setSalaryStructure] = useState<any>(null);
   const [skills, setSkills] = useState<any[]>([]);
 
   // Enforce Employee-only access
@@ -72,21 +70,15 @@ export default function EmployeeProfilePage() {
         setProfile(dbProfile);
 
         // 3. Query other sections in parallel
-        const [privateRes, payrollRes, structureRes, skillsRes] = await Promise.all([
+        const [privateRes, skillsRes] = await Promise.all([
           supabase.from('employee_private_info').select('*').eq('profile_id', user.id).maybeSingle(),
-          supabase.from('payroll').select('*').eq('employee_id', user.id).maybeSingle(),
-          supabase.from('salary_structures').select('*').eq('employee_id', user.id).maybeSingle(),
           supabase.from('employee_skills').select('*').eq('employee_id', user.id)
         ]);
 
         if (privateRes.error) console.error('Private Info Error:', privateRes.error);
-        if (payrollRes.error) console.error('Payroll Error:', payrollRes.error);
-        if (structureRes.error) console.error('Salary Structure Error:', structureRes.error);
         if (skillsRes.error) console.error('Skills Error:', skillsRes.error);
 
         setPrivateInfo(privateRes.data || null);
-        setPayroll(payrollRes.data || null);
-        setSalaryStructure(structureRes.data || null);
         setSkills(skillsRes.data || []);
       } catch (err: any) {
         console.error('Unable to load profile. Supabase error details:', err);
@@ -175,7 +167,7 @@ export default function EmployeeProfilePage() {
       )}
 
       {activeTab === 'salary' && (
-        <EmployeeSalaryInfo payroll={payroll} salaryStructure={salaryStructure} />
+        <EmployeeSalaryInfo />
       )}
 
       {activeTab === 'security' && (

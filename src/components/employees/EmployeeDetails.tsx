@@ -4,6 +4,7 @@ import { ArrowLeft, Mail, Phone, Calendar, Briefcase, Hash } from 'lucide-react'
 import { Employee } from '../../data/mockEmployees';
 import { Avatar } from '../ui/Avatar';
 import { StatusDot } from '../ui/StatusDot';
+import { EmployeeSalaryManager } from './EmployeeSalaryManager';
 
 interface EmployeeDetailsProps {
   employee: Employee;
@@ -123,6 +124,9 @@ export const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee }) =>
           </div>
         </div>
       </div>
+
+      {/* Salary Management Section */}
+      <EmployeeSalaryManager employee={employee} />
     </div>
   );
 };
