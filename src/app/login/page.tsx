@@ -6,6 +6,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 export default function LoginPage() {
+  const [selectedRole, setSelectedRole] = useState<'employee' | 'admin'>('employee');
   const [emailOrId, setEmailOrId] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -13,7 +14,7 @@ export default function LoginPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Temporary visual placeholder feedback as per specs
-    alert('Sign In clicked! Authentication integration will be implemented in a future update.');
+    alert(`Sign In clicked for role: ${selectedRole}! Authentication integration will be implemented in a future update.`);
   };
 
   return (
@@ -32,6 +33,22 @@ export default function LoginPage() {
       {/* Form */}
       <form onSubmit={handleSubmit} className="w-full space-y-6">
         
+        {/* Role Selection */}
+        <div>
+          <label htmlFor="role" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
+            Role
+          </label>
+          <select
+            id="role"
+            value={selectedRole}
+            onChange={(e) => setSelectedRole(e.target.value as 'employee' | 'admin')}
+            className="w-full px-4 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all cursor-pointer"
+          >
+            <option value="employee">Employee</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+
         {/* Login ID / Email */}
         <div>
           <label htmlFor="emailOrId" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
@@ -72,6 +89,23 @@ export default function LoginPage() {
             </button>
           </div>
         </div>
+
+        {/* Admin Test Credentials Info Box */}
+        {selectedRole === 'admin' && (
+          <div className="bg-[#FFF4EC] border border-orange-100/50 rounded-xl p-3.5 text-xs text-gray-700 space-y-1.5 select-all animate-in fade-in slide-in-from-top-1 duration-200">
+            <p className="font-extrabold text-[#B26B50] uppercase tracking-wider mb-1">
+              Test Admin Credentials
+            </p>
+            <div>
+              <span className="font-semibold text-gray-500">Email:</span>{' '}
+              <code className="font-mono bg-white px-1 py-0.5 rounded border border-orange-200/20 text-[#A05C45]">admin@gmail.com</code>
+            </div>
+            <div>
+              <span className="font-semibold text-gray-500">Password:</span>{' '}
+              <code className="font-mono bg-white px-1 py-0.5 rounded border border-orange-200/20 text-[#A05C45]">admin123</code>
+            </div>
+          </div>
+        )}
 
         {/* Submit Button */}
         <Button
