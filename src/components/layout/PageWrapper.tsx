@@ -1,0 +1,29 @@
+'use client';
+
+import React from 'react';
+import { useApp } from '@/context/AppContext';
+import { Navbar } from './Navbar';
+
+interface PageWrapperProps {
+  children: React.ReactNode;
+}
+
+export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
+  const { currentUser } = useApp();
+
+  const handleLogout = () => {
+    alert('Log Out handler triggered. Supabase Authentication integration will be connected in a future release.');
+  };
+
+  return (
+    <div className="min-h-screen bg-lavender flex flex-col">
+      {/* Top Navbar */}
+      <Navbar currentUser={currentUser} onLogout={handleLogout} />
+
+      {/* Main content grid */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 transition-all duration-200">
+        {children}
+      </main>
+    </div>
+  );
+};
