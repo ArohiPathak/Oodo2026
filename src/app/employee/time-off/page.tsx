@@ -1,47 +1,151 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Plus, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Plus, CheckCircle, AlertCircle, Clock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { createClient } from '@/lib/supabase/client';
+
+// Formatting helpers
+const formatLeaveType = (type: string) => {
+  if (!type) return '—';
+  const config: Record<string, string> = {
+    paid: 'Paid Leave',
+    sick: 'Sick Leave',
+    unpaid: 'Unpaid Leave',
+  };
+  return config[type.toLowerCase()] || type;
+};
+
+const formatRange = (start: string, end: string) => {
+  try {
+    const s = new Date(start + 'T00:00:00');
+    const e = new Date(end + 'T00:00:00');
+    if (s.getTime() === e.getTime()) {
+      return s.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    
+    const startStr = s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const endStr = e.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return `${startStr} - ${endStr}`;
+  } catch (err) {
+    return `${start} – ${end}`;
+  }
+};
 
 export default function EmployeeTimeOffPage() {
+  const supabase = createClient();
+  const router = useRouter();
+
+  // Authentication states
+  const [authLoading, setAuthLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Form states
   const [leaveType, setLeaveType] = useState('Paid');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [remarks, setRemarks] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [requests, setRequests] = useState([
-    { id: 1, type: 'Paid Leave', dateRange: 'Aug 25 - Aug 27, 2026', duration: '3 days', status: 'pending', desc: 'Family trip' },
-    { id: 2, type: 'Sick Leave', dateRange: 'Jul 14, 2026', duration: '1 day', status: 'approved', desc: 'Medical appointment' },
-    { id: 3, type: 'Unpaid Leave', dateRange: 'May 02, 2026', duration: '1 day', status: 'rejected', desc: 'Personal work' },
-  ]);
+  // Requests state
+  const [requests, setRequests] = useState<any[]>([]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // 1. Fetch requests function
+  const fetchRequests = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('leave_requests')
+        .select('*')
+        .eq('employee_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      setRequests(data || []);
+    } catch (err) {
+      console.error('Error fetching employee leaves:', err);
+    }
+  };
+
+  // Auth check on mount
+  useEffect(() => {
+    const initPage = async () => {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          router.push('/login');
+          return;
+        }
+
+        setCurrentUser(user);
+        await fetchRequests(user.id);
+      } catch (err) {
+        console.error('Error initializing page:', err);
+        router.push('/login');
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    initPage();
+  }, [router, supabase]);
+
+  // 2. Submit form handle (real insert)
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!startDate || !endDate) {
       alert('Please select both start and end dates.');
       return;
     }
-    
-    // Dynamic request creation
-    const newRequest = {
-      id: Date.now(),
-      type: `${leaveType} Leave`,
-      dateRange: `${new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
-      duration: 'Calculated',
-      status: 'pending',
-      desc: remarks || 'No remarks provided',
-    };
 
-    setRequests(prev => [newRequest, ...prev]);
-    setStartDate('');
-    setEndDate('');
-    setRemarks('');
-    alert('Leave request submitted successfully!');
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        alert('You must be logged in to submit a request.');
+        router.push('/login');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('leave_requests')
+        .insert({
+          employee_id: user.id,
+          leave_type: leaveType.toLowerCase(),
+          start_date: startDate,
+          end_date: endDate,
+          reason: remarks,
+          status: 'pending'
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // Reset form fields
+      setStartDate('');
+      setEndDate('');
+      setRemarks('');
+
+      // Refresh request history from Supabase
+      await fetchRequests(user.id);
+
+      alert('Leave request submitted successfully!');
+    } catch (err: any) {
+      console.error('Submission error:', err.message);
+      alert('Unable to submit leave request. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'approved':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600">
@@ -66,6 +170,15 @@ export default function EmployeeTimeOffPage() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] py-20 space-y-4">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+        <p className="text-sm font-bold text-gray-500 tracking-wide animate-pulse">Checking credentials...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       <div>
@@ -83,8 +196,9 @@ export default function EmployeeTimeOffPage() {
               <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Leave Type</label>
               <select
                 value={leaveType}
+                disabled={isSubmitting}
                 onChange={(e) => setLeaveType(e.target.value)}
-                className="w-full px-3 py-2 bg-lavender/30 border border-primary/5 rounded-xl text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full px-3 py-2 bg-lavender/30 border border-primary/5 rounded-xl text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
               >
                 <option value="Paid">Paid Leave</option>
                 <option value="Sick">Sick Leave</option>
@@ -97,8 +211,9 @@ export default function EmployeeTimeOffPage() {
               <input
                 type="date"
                 value={startDate}
+                disabled={isSubmitting}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 bg-lavender/30 border border-primary/5 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full px-3 py-2 bg-lavender/30 border border-primary/5 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
               />
             </div>
 
@@ -107,8 +222,9 @@ export default function EmployeeTimeOffPage() {
               <input
                 type="date"
                 value={endDate}
+                disabled={isSubmitting}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 bg-lavender/30 border border-primary/5 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full px-3 py-2 bg-lavender/30 border border-primary/5 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
               />
             </div>
 
@@ -116,15 +232,25 @@ export default function EmployeeTimeOffPage() {
               <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Remarks / Notes</label>
               <textarea
                 value={remarks}
+                disabled={isSubmitting}
                 onChange={(e) => setRemarks(e.target.value)}
                 placeholder="Brief reason for your request"
-                className="w-full px-3 py-2 bg-lavender/30 border border-primary/5 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[80px]"
+                className="w-full px-3 py-2 bg-lavender/30 border border-primary/5 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[80px] disabled:opacity-50"
               />
             </div>
 
-            <Button type="submit" variant="primary" className="w-full py-2.5 flex items-center justify-center gap-2 cursor-pointer">
-              <Plus size={16} />
-              Submit Request
+            <Button type="submit" variant="primary" disabled={isSubmitting} className="w-full py-2.5 flex items-center justify-center gap-2 cursor-pointer">
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Plus size={16} />
+                  Submit Request
+                </>
+              )}
             </Button>
           </form>
         </div>
@@ -150,12 +276,19 @@ export default function EmployeeTimeOffPage() {
                 <tbody className="divide-y divide-gray-50 text-sm font-semibold text-gray-700">
                   {requests.map((req) => (
                     <tr key={req.id} className="hover:bg-lavender/5 transition-colors">
-                      <td className="py-4 px-6 text-gray-900 font-bold">{req.type}</td>
-                      <td className="py-4 px-6 text-gray-500">{req.dateRange}</td>
-                      <td className="py-4 px-6 text-gray-400 font-normal truncate max-w-[150px]">{req.desc}</td>
+                      <td className="py-4 px-6 text-gray-900 font-bold">{formatLeaveType(req.leave_type)}</td>
+                      <td className="py-4 px-6 text-gray-500">{formatRange(req.start_date, req.end_date)}</td>
+                      <td className="py-4 px-6 text-gray-400 font-normal truncate max-w-[150px]">{req.reason || '—'}</td>
                       <td className="py-4 px-6">{getStatusBadge(req.status)}</td>
                     </tr>
                   ))}
+                  {requests.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-8 text-center text-xs font-semibold text-gray-400 italic">
+                        No leave request logs found.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

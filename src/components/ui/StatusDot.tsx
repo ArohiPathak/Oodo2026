@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plane } from 'lucide-react';
 
-export type AttendanceStatus = 'present' | 'absent' | 'leave' | 'half_day';
+export type AttendanceStatus = 'present' | 'absent' | 'leave' | 'half_day' | 'half-day';
 
 interface StatusDotProps {
   status: AttendanceStatus;
@@ -41,7 +41,8 @@ export const StatusDot: React.FC<StatusDotProps> = ({
     },
   };
 
-  const config = statusConfig[status] || statusConfig.absent;
+  const normalizedStatus = (status === 'half-day' ? 'half_day' : status) as 'present' | 'absent' | 'leave' | 'half_day';
+  const config = statusConfig[normalizedStatus] || statusConfig.absent;
 
   if (showLabel) {
     return (
