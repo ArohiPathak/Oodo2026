@@ -5,16 +5,117 @@ import Link from 'next/link';
 import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+
 export default function LoginPage() {
+  const router = useRouter();
   const [selectedRole, setSelectedRole] = useState<'employee' | 'admin'>('employee');
   const [emailOrId, setEmailOrId] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Temporary visual placeholder feedback as per specs
-    alert(`Sign In clicked for role: ${selectedRole}! Authentication integration will be implemented in a future update.`);
+    if (isLoading) return;
+
+    setIsLoading(true);
+    setErrorMsg('');
+
+    try {
+      const supabase = createClient();
+      let email = emailOrId.trim();
+
+      // Check if user entered an email address or an Employee ID
+      const isEmail = email.includes('@');
+
+      if (!isEmail) {
+        // Query profiles by employee_id to find the email
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('employee_id', email)
+          .maybeSingle();
+
+        if (profileError) {
+          setErrorMsg('Unable to sign in right now. Please try again.');
+          setIsLoading(false);
+          return;
+        }
+
+        if (!profileData || !profileData.email) {
+          setErrorMsg('Employee account not found. Please contact HR.');
+          setIsLoading(false);
+          return;
+        }
+
+        email = profileData.email;
+      }
+
+      // Authenticate via Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        setErrorMsg('Invalid email/Login ID or password.');
+        setIsLoading(false);
+        return;
+      }
+
+      const user = authData.user;
+      if (!user) {
+        setErrorMsg('Unable to sign in right now. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch profile to verify role
+      const { data: profile, error: profileQueryError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileQueryError) {
+        await supabase.auth.signOut();
+        setErrorMsg('Unable to sign in right now. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!profile) {
+        // Auth user exists but profile is missing
+        await supabase.auth.signOut();
+        setErrorMsg('Employee account not found. Please contact HR.');
+        setIsLoading(false);
+        return;
+      }
+
+      const userRole = profile.role?.toLowerCase();
+      if (userRole !== selectedRole) {
+        await supabase.auth.signOut();
+        setErrorMsg('Selected role does not match your account.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Redirect based on verified role
+      if (userRole === 'admin') {
+        router.push('/employees');
+      } else {
+        router.push('/profile');
+      }
+
+      router.refresh();
+
+    } catch (err: any) {
+      setErrorMsg('Unable to sign in right now. Please try again.');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -41,8 +142,9 @@ export default function LoginPage() {
           <select
             id="role"
             value={selectedRole}
+            disabled={isLoading}
             onChange={(e) => setSelectedRole(e.target.value as 'employee' | 'admin')}
-            className="w-full px-4 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all cursor-pointer"
+            className="w-full px-4 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <option value="employee">Employee</option>
             <option value="admin">Admin</option>
@@ -58,10 +160,11 @@ export default function LoginPage() {
             id="emailOrId"
             type="text"
             required
+            disabled={isLoading}
             value={emailOrId}
             onChange={(e) => setEmailOrId(e.target.value)}
             placeholder="Enter Login ID or Email"
-            className="w-full px-4 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
+            className="w-full px-4 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -75,15 +178,17 @@ export default function LoginPage() {
               id="password"
               type={showPassword ? 'text' : 'password'}
               required
+              disabled={isLoading}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter Password"
-              className="w-full pl-4 pr-10 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
+              className="w-full pl-4 pr-10 py-2.5 bg-lavender/35 border border-primary/5 rounded-xl text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             />
             <button
               type="button"
+              disabled={isLoading}
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none transition-colors animate-none"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -107,13 +212,21 @@ export default function LoginPage() {
           </div>
         )}
 
+        {/* Error Alert Display */}
+        {errorMsg && (
+          <div className="bg-red-50 border border-red-100 text-red-600 rounded-xl p-3 text-xs font-semibold animate-in fade-in slide-in-from-top-1 duration-200">
+            {errorMsg}
+          </div>
+        )}
+
         {/* Submit Button */}
         <Button
           type="submit"
           variant="primary"
+          disabled={isLoading}
           className="w-full py-2.5 shadow-soft hover:shadow-soft-lg mt-2 text-sm font-semibold tracking-wider"
         >
-          SIGN IN
+          {isLoading ? 'SIGNING IN...' : 'SIGN IN'}
         </Button>
       </form>
 
