@@ -46,7 +46,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       minute: '2-digit',
       hour12: true,
     }));
-    
+
     // Update logged-in employee status to 'present'
     setEmployees((prev) =>
       prev.map((emp) => (emp.id === currentUser.id ? { ...emp, status: 'present' } : emp))
@@ -55,7 +55,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const handleCheckOut = () => {
     setIsCheckedIn(false);
-    
+
     // Update logged-in employee status to 'absent'
     setEmployees((prev) =>
       prev.map((emp) => (emp.id === currentUser.id ? { ...emp, status: 'absent' } : emp))
