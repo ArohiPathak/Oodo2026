@@ -27,11 +27,17 @@ export const Navbar: React.FC<NavbarProps> = ({ currentUser, onLogout }) => {
   const { isCheckedIn, checkInTime, handleCheckIn, handleCheckOut } = useApp();
 
   const isAdmin = currentUser.role === 'admin';
-  const navItems = [
-    { name: 'Employees', href: '/employees', icon: Users },
-    { name: 'Attendance', href: isAdmin ? '/attendance' : '/employee/attendance', icon: Clock },
-    { name: 'Time Off', href: isAdmin ? '/time-off' : '/employee/time-off', icon: Calendar },
-  ];
+  const navItems = isAdmin
+    ? [
+        { name: 'Employees', href: '/employees', icon: Users },
+        { name: 'Attendance', href: '/attendance', icon: Clock },
+        { name: 'Time Off', href: '/time-off', icon: Calendar },
+      ]
+    : [
+        { name: 'Dashboard', href: '/employee/dashboard', icon: Users },
+        { name: 'Attendance', href: '/employee/attendance', icon: Clock },
+        { name: 'Time Off', href: '/employee/time-off', icon: Calendar },
+      ];
 
   const isLinkActive = (href: string) => {
     if (href === '/employees' && pathname.startsWith('/employees')) {

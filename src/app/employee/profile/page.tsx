@@ -44,99 +44,99 @@ export default function EmployeeProfilePage() {
   // -------------------------------------------------------
   // FETCH EMPLOYEE PROFILE DATA
   // -------------------------------------------------------
-  useEffect(() => {
-    const fetchProfileData = async () => {
-      setLoading(true);
-      setError(null);
+  const fetchProfileData = async () => {
+    setLoading(true);
+    setError(null);
 
-      try {
-        // 1. Get authenticated user
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+    try {
+      // 1. Get authenticated user
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-        if (userError) {
-          console.error('Auth user error:', userError);
-          throw userError;
-        }
-
-        if (!user) {
-          router.replace('/login');
-          return;
-        }
-
-        // 2. Fetch main profile + joined data
-        const {
-          data: dbProfile,
-          error: profileError,
-        } = await supabase
-          .from('profiles')
-          .select(`
-            *,
-            department:departments(name),
-            company:companies(name),
-            manager:profiles!manager_id(full_name)
-          `)
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (profileError) {
-          console.error('Profile fetch error:', profileError);
-          throw profileError;
-        }
-
-        if (!dbProfile) {
-          setError('Profile record not found.');
-          return;
-        }
-
-        setProfile(dbProfile);
-
-        // 3. Fetch private info + skills
-        const [privateRes, skillsRes] = await Promise.all([
-          supabase
-            .from('employee_private_info')
-            .select('*')
-            .eq('profile_id', user.id)
-            .maybeSingle(),
-
-          supabase
-            .from('employee_skills')
-            .select('*')
-            .eq('employee_id', user.id),
-        ]);
-
-        if (privateRes.error) {
-          console.error(
-            'Private info fetch error:',
-            privateRes.error
-          );
-        }
-
-        if (skillsRes.error) {
-          console.error(
-            'Skills fetch error:',
-            skillsRes.error
-          );
-        }
-
-        setPrivateInfo(privateRes.data || null);
-        setSkills(skillsRes.data || []);
-      } catch (err) {
-        console.error(
-          'Unable to load profile. Supabase error:',
-          err
-        );
-
-        setError(
-          'Unable to load profile. Please try again.'
-        );
-      } finally {
-        setLoading(false);
+      if (userError) {
+        console.error('Auth user error:', userError);
+        throw userError;
       }
-    };
 
+      if (!user) {
+        router.replace('/login');
+        return;
+      }
+
+      // 2. Fetch main profile + joined data
+      const {
+        data: dbProfile,
+        error: profileError,
+      } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          department:departments(name),
+          company:companies(name),
+          manager:profiles!manager_id(full_name)
+        `)
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        throw profileError;
+      }
+
+      if (!dbProfile) {
+        setError('Profile record not found.');
+        return;
+      }
+
+      setProfile(dbProfile);
+
+      // 3. Fetch private info + skills
+      const [privateRes, skillsRes] = await Promise.all([
+        supabase
+          .from('employee_private_info')
+          .select('*')
+          .eq('profile_id', user.id)
+          .maybeSingle(),
+
+        supabase
+          .from('employee_skills')
+          .select('*')
+          .eq('employee_id', user.id),
+      ]);
+
+      if (privateRes.error) {
+        console.error(
+          'Private info fetch error:',
+          privateRes.error
+        );
+      }
+
+      if (skillsRes.error) {
+        console.error(
+          'Skills fetch error:',
+          skillsRes.error
+        );
+      }
+
+      setPrivateInfo(privateRes.data || null);
+      setSkills(skillsRes.data || []);
+    } catch (err) {
+      console.error(
+        'Unable to load profile. Supabase error:',
+        err
+      );
+
+      setError(
+        'Unable to load profile. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchProfileData();
   }, [router, supabase]);
 
@@ -266,6 +266,7 @@ export default function EmployeeProfilePage() {
         <EmployeePrivateInfo
           employee={profile}
           privateInfo={privateInfo}
+          onRefresh={fetchProfileData}
         />
       )}
 
