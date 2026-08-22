@@ -107,7 +107,7 @@ export default function LoginPage() {
       if (userRole === 'admin') {
         router.push('/employees');
       } else {
-        router.push('/profile');
+        router.push('/employee/dashboard');
       }
 
       router.refresh();

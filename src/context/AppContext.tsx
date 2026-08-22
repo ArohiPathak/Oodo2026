@@ -1,4 +1,6 @@
 'use client';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Employee, initialEmployees } from '../data/mockEmployees';
@@ -11,6 +13,7 @@ interface AppContextType {
   handleCheckIn: () => void;
   handleCheckOut: () => void;
   currentUser: Employee;
+  logout: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -19,6 +22,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [checkInTime, setCheckInTime] = useState('09:00 AM');
+  const router = useRouter();
+  const supabase = createClient();
 
   // Find current user (Aarav Sharma)
   const currentUser = employees.find((emp) => emp.id === 'EMP001') || employees[0];
@@ -62,6 +67,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error('Logout failed:', error.message);
+      return;
+    }
+
+    router.push('/login');
+    router.refresh();
+  };
   return (
     <AppContext.Provider
       value={{
@@ -72,6 +88,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleCheckIn,
         handleCheckOut,
         currentUser,
+        logout,
       }}
     >
       {children}

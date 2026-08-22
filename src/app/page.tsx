@@ -19,6 +19,6 @@ export default async function Home() {
   if (profile?.role === 'admin') {
     redirect('/employees');
   } else {
-    redirect('/profile');
+    redirect('/employee/dashboard');
   }
 }

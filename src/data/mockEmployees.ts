@@ -7,6 +7,16 @@ export interface Employee {
   phone: string;
   joiningDate: string;
   status: 'present' | 'absent' | 'leave';
+  company?: string;
+  manager?: string;
+  location?: string;
+  dob?: string;
+  address?: string;
+  nationality?: string;
+  personalEmail?: string;
+  gender?: string;
+  maritalStatus?: string;
+  avatarUrl?: string;
 }
 
 export const initialEmployees: Employee[] = [
@@ -18,7 +28,16 @@ export const initialEmployees: Employee[] = [
     email: "aarav.sharma@dayflow.com",
     phone: "+91 98765 43210",
     joiningDate: "2024-01-15",
-    status: "present"
+    status: "present",
+    company: "Dayflow Technologies",
+    manager: "Ananya Rao (HR Specialist)",
+    location: "Mumbai, India",
+    dob: "1996-10-24",
+    address: "Flat 402, Sea Breeze Apartments, Bandra West, Mumbai - 400050",
+    nationality: "Indian",
+    personalEmail: "aarav.sharma.personal@gmail.com",
+    gender: "Male",
+    maritalStatus: "Single"
   },
   {
     id: "EMP002",
