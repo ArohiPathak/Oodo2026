@@ -21,23 +21,23 @@ export const employeeService = {
 
     if (dbProfiles) {
       return dbProfiles.map((p: any) => ({
-        id: p.employee_id || `EMP-${p.id.substring(0, 8).toUpperCase()}`,
-        name: p.full_name || 'New Employee',
-        designation: p.designation || 'Software Engineer',
-        department: p.department?.name || 'Engineering',
+        id: p.employee_id || '',
+        name: p.full_name || '',
+        designation: p.designation || '',
+        department: p.department?.name || '',
         email: p.email || '',
-        phone: p.phone || '+91 98765 00000',
-        joiningDate: p.joining_date || new Date().toISOString().split('T')[0],
+        phone: p.phone || '',
+        joiningDate: p.joining_date || '',
         status: 'present',
-        company: p.company?.name || 'Dayflow Technologies',
-        manager: p.manager?.full_name || 'Ananya Rao',
-        location: p.location || 'Mumbai, India',
-        dob: p.dob || '',
-        address: p.address || '',
-        nationality: p.nationality || '',
-        personalEmail: p.personal_email || '',
-        gender: p.gender || '',
-        maritalStatus: p.marital_status || '',
+        company: p.company?.name || '',
+        manager: p.manager?.full_name || '',
+        location: p.location || '',
+        dob: '',
+        address: '',
+        nationality: '',
+        personalEmail: '',
+        gender: '',
+        maritalStatus: '',
         avatarUrl: p.profile_picture || '',
         about: p.about || '',
       }));
@@ -45,7 +45,8 @@ export const employeeService = {
     return [];
   },
 
-  fetchEmployeeById: async (id: string): Promise<Employee | null> => {
+  fetchEmployeeById: async (id: string): Promise<any> => {
+    // 1. Fetch profile details
     const { data: profile, error } = await supabase
       .from('profiles')
       .select(`
@@ -62,26 +63,58 @@ export const employeeService = {
       return null;
     }
 
+    // 2. Fetch parallel sub-records
+    const [privateRes, payrollRes, structureRes, skillsRes] = await Promise.all([
+      supabase.from('employee_private_info').select('*').eq('profile_id', profile.id).maybeSingle(),
+      supabase.from('payroll').select('*').eq('employee_id', profile.id).maybeSingle(),
+      supabase.from('salary_structures').select('*').eq('employee_id', profile.id).maybeSingle(),
+      supabase.from('employee_skills').select('*').eq('employee_id', profile.id)
+    ]);
+
+    const privateInfo = privateRes.data || null;
+    const payroll = payrollRes.data || null;
+    const salaryStructure = structureRes.data || null;
+    const skills = skillsRes.data || [];
+
     return {
       id: profile.employee_id || `EMP-${profile.id.substring(0, 8).toUpperCase()}`,
+      db_id: profile.id,
       name: profile.full_name || 'New Employee',
       designation: profile.designation || 'Software Engineer',
       department: profile.department?.name || 'Engineering',
+      departmentId: profile.department_id,
+      company: profile.company?.name || 'Dayflow Technologies',
+      companyId: profile.company_id,
+      manager: profile.manager?.full_name || 'Ananya Rao',
+      managerId: profile.manager_id,
+      location: profile.location || 'Mumbai, India',
       email: profile.email || '',
-      phone: profile.phone || '+91 98765 00000',
+      phone: profile.phone || '',
       joiningDate: profile.joining_date || new Date().toISOString().split('T')[0],
       status: 'present',
-      company: profile.company?.name || 'Dayflow Technologies',
-      manager: profile.manager?.full_name || 'Ananya Rao',
-      location: profile.location || 'Mumbai, India',
-      dob: profile.dob || '',
-      address: profile.address || '',
-      nationality: profile.nationality || '',
-      personalEmail: profile.personal_email || '',
-      gender: profile.gender || '',
-      maritalStatus: profile.marital_status || '',
-      avatarUrl: profile.profile_picture || '',
+
+      dob: privateInfo?.date_of_birth || '',
+      address: privateInfo?.residential_address || '',
+      nationality: privateInfo?.nationality || '',
+      personalEmail: privateInfo?.personal_email || '',
+      gender: privateInfo?.gender || '',
+      maritalStatus: privateInfo?.marital_status || '',
+
+      bankAccountNumber: privateInfo?.bank_account_number || '',
+      bankName: privateInfo?.bank_name || '',
+      ifscCode: privateInfo?.ifsc_code || '',
+      panNo: privateInfo?.pan_no || '',
+      uanNo: privateInfo?.uan_no || '',
+
+      basicSalary: salaryStructure?.basic_salary || payroll?.basic_salary || 0,
+      hra: salaryStructure?.hra || 0,
+      allowances: payroll?.allowances || salaryStructure?.fixed_allowance || 0,
+      deductions: payroll?.deductions || salaryStructure?.professional_tax || 0,
+      netSalary: payroll?.net_salary || salaryStructure?.monthly_wage || 0,
+
+      skills: skills.map((s: any) => s.skill_name),
       about: profile.about || '',
+      avatarUrl: profile.profile_picture || '',
     };
   },
 
