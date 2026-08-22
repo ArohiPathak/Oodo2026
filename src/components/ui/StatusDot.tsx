@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plane } from 'lucide-react';
 
-export type AttendanceStatus = 'present' | 'absent' | 'leave';
+export type AttendanceStatus = 'present' | 'absent' | 'leave' | 'half_day';
 
 interface StatusDotProps {
   status: AttendanceStatus;
@@ -32,6 +32,12 @@ export const StatusDot: React.FC<StatusDotProps> = ({
       textClass: 'text-amber-600',
       bgClass: 'bg-[#FEF3C7]',
       label: 'Absent',
+    },
+    half_day: {
+      dotClass: 'bg-[#8B5CF6]', // Purple
+      textClass: 'text-purple-600',
+      bgClass: 'bg-[#F5F3FF]',
+      label: 'Half Day',
     },
   };
 
