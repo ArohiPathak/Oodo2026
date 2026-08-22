@@ -12,13 +12,13 @@ interface PageWrapperProps {
 export const PageWrapper: React.FC<PageWrapperProps> = ({ children }) => {
   const { currentUser } = useApp();
   const pathname = usePathname();
-  const isLoginPage = pathname === '/login';
+  const isAuthPage = pathname === '/login' || pathname === '/signup';
 
   const handleLogout = () => {
     alert('Log Out handler triggered. Supabase Authentication integration will be connected in a future release.');
   };
 
-  if (isLoginPage) {
+  if (isAuthPage) {
     return (
       <div className="min-h-screen bg-lavender flex flex-col items-center justify-center p-4">
         {children}
