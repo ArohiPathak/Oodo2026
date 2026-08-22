@@ -23,5 +23,5 @@ export default async function Home() {
     return <AdminDashboard />;
   }
 
-  redirect('/profile');
+  redirect('/employee/dashboard');
 }
